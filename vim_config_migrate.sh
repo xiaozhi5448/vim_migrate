@@ -5,29 +5,24 @@
 #
 #         USAGE: ./vim_config_migrate.sh
 #
-#   DESCRIPTION: 
+#   DESCRIPTION:
 #
 #       OPTIONS: ---
 #  REQUIREMENTS: ---
 #          BUGS: ---
 #         NOTES: ---
-#        AUTHOR: YOUR NAME (), 
-#  ORGANIZATION: 
+#        AUTHOR: YOUR NAME (),
+#  ORGANIZATION:
 #       CREATED: 08/21/2018 07:17:59 PM
 #      REVISION:  ---
 #===============================================================================
 
 set -o nounset                                  # Treat unset variables as an error
-pkgmgr=""
-which "yum" &> /dev/null
-res1=$?
-which "apt-get" &> /dev/null
-res2=$?
-if [ $res1 -eq 0 ]
+if which yum
 then
     pkgmgr="yum"
-    echo -e "detected system:fedora/centos\n"
-elif [ $res2 -eq 0 ]
+    printf "%s\n"  "detected system:fedora/centos"
+elif which apt
 then
     pkgmgr="apt-get"
     echo -e "detected system:ubuntu/debian\n"
@@ -41,20 +36,35 @@ sudo $pkgmgr install git vim ctags clang cppcheck wget python python-pip -y
 #exit
 
 
-sudo $pkgmgr install git vim ctags clang cppcheck wget python python-pip -y
-if [ $? -ne 0 ]
+
+if ! sudo $pkgmgr install git vim ctags clang cppcheck wget python python-pip -y
 then
     echo -e "something wrong, install deps failed\n"
     exit
 fi
 
 pip install autopep8 --user
-git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
-if [ $? -ne 0 ]
-then
-    echo -e "clone vundle failed!\n"
-    exit
+if [[ -d ~/.vim ]];then
+    echo "delete existing vundle"
+    rm -rf ~/.vim
 fi
+while /bin/true
+do
+    if ! proxychains git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+    then
+        read -p "clone vundle failed, try again[y/n]: " opt
+        if [[ $opt == "y" ]]
+        then
+            rm -rf ~/.vim
+            continue
+        else
+            exit
+        fi
+    else
+        break
+    fi
+done
+
 
 cat << EOF > ~/.vimrc
 set nocompatible
@@ -126,7 +136,7 @@ let g:cpp_class_decl_highlight = 1
 let g:cpp_concepts_highlight = 1
 EOF
 sed -i 's/colorscheme madeofcode/\"colorscheme madeofcode/' ~/.vimrc
-vim +PluginInstall +qall
+proxychains vim +PluginInstall +qall
 sed -i 's/\"colorscheme madeofcode/colorscheme madeofcode/' ~/.vimrc
 echo -e "vimconfig migrate successfully!
 view the .vimrc in your home directory to find out which plugin has been installed!
